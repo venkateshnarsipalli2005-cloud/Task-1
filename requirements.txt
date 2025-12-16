@@ -1,0 +1,42 @@
+# Python Dependencies for Retail Sales Forecasting Project
+
+# Data Processing
+pandas>=1.3.0
+numpy>=1.21.0
+openpyxl>=3.6.0
+
+# Time Series Forecasting
+fbprophet>=1.1
+statsmodels>=0.13.0
+scikit-learn>=1.0.0
+
+# Machine Learning
+xgboost>=1.5.0
+lightgbm>=3.3.0
+
+# Visualization
+matplotlib>=3.4.0
+seaborn>=0.11.0
+plotly>=5.0.0
+
+# Jupyter & Development
+jupyter>=1.0.0
+ipython>=7.0.0
+ipywidgets>=7.6.0
+
+# Utilities
+python-dateutil>=2.8.0
+pytz>=2021.3
+tqdm>=4.62.0
+
+# Data Validation
+pandera>=0.10.0
+
+# Power BI Integration (optional)
+pyodbc>=4.0.0
+sqlalchemy>=1.4.0
+
+# Additional Tools
+click>=8.0.0
+pyyaml>=5.4.0
+python-dotenv>=0.19.0
