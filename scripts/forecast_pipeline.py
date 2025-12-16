@@ -10,7 +10,8 @@ from datetime import datetime, timedelta
 import json
 import logging
 
-from fbprophet import Prophet
+# Machine Learning Imports
+from prophet import Prophet
 from statsmodels.tsa.arima.model import ARIMA
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_absolute_percentage_error, r2_score
@@ -21,19 +22,17 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+# FIXED: Added double underscores below
 logger = logging.getLogger(__name__)
 
 
 class ForecastPipeline:
     """Complete forecasting pipeline"""
     
-    def __init__(self, data_path, output_path='../outputs'):
+    # FIXED: This init method accepts data_path
+    def __init__(self, data_path, output_path='outputs'):
         """
         Initialize pipeline
-        
-        Args:
-            data_path (str): Path to processed features CSV
-            output_path (str): Path to save outputs
         """
         self.data_path = Path(data_path)
         self.output_path = Path(output_path)
@@ -49,17 +48,18 @@ class ForecastPipeline:
     def load_data(self):
         """Load engineered features"""
         self.df = pd.read_csv(self.data_path)
-        self.df['date'] = pd.to_datetime(self.df['date'])
-        self.df = self.df.sort_values('date').reset_index(drop=True)
+        # FIXED: Using standard datetime and correct column name
+        self.df['OrderDate'] = pd.to_datetime(self.df['OrderDate'])
+        self.df = self.df.sort_values('OrderDate').reset_index(drop=True)
         
         logger.info(f"✓ Loaded data: {len(self.df)} rows, {len(self.df.columns)} columns")
         return self.df
     
     def train_test_split(self, test_ratio=0.2):
         """Split data into train/test sets"""
-        split_date = self.df['date'].quantile(test_ratio)
-        self.df_train = self.df[self.df['date'] <= split_date].reset_index(drop=True)
-        self.df_test = self.df[self.df['date'] > split_date].reset_index(drop=True)
+        split_date = self.df['OrderDate'].quantile(test_ratio)
+        self.df_train = self.df[self.df['OrderDate'] <= split_date].reset_index(drop=True)
+        self.df_test = self.df[self.df['OrderDate'] > split_date].reset_index(drop=True)
         
         logger.info(f"✓ Train: {len(self.df_train)} | Test: {len(self.df_test)}")
         return self.df_train, self.df_test
@@ -67,7 +67,8 @@ class ForecastPipeline:
     def train_prophet(self):
         """Train Prophet model"""
         try:
-            prophet_train = self.df_train[['date', 'sales']].copy()
+            # FIXED: Capital S for Sales
+            prophet_train = self.df_train[['OrderDate', 'Sales']].copy()
             prophet_train.columns = ['ds', 'y']
             
             model = Prophet(
@@ -96,7 +97,8 @@ class ForecastPipeline:
     def train_arima(self, order=(5, 1, 2)):
         """Train ARIMA model"""
         try:
-            model = ARIMA(self.df_train['sales'], order=order)
+            # FIXED: Capital S for Sales
+            model = ARIMA(self.df_train['Sales'], order=order)
             result = model.fit()
             
             # Predict on test
@@ -116,10 +118,10 @@ class ForecastPipeline:
         """Train XGBoost model"""
         try:
             feature_cols = [col for col in self.df_train.columns 
-                           if col not in ['date', 'sales']]
+                           if col not in ['OrderDate', 'Sales']]
             
             X_train = self.df_train[feature_cols].fillna(0)
-            y_train = self.df_train['sales']
+            y_train = self.df_train['Sales']
             X_test = self.df_test[feature_cols].fillna(0)
             
             scaler = StandardScaler()
@@ -152,10 +154,11 @@ class ForecastPipeline:
         results = []
         
         for model_name, predictions in self.predictions.items():
-            mae = mean_absolute_error(self.df_test['sales'], predictions)
-            rmse = np.sqrt(mean_squared_error(self.df_test['sales'], predictions))
-            mape = mean_absolute_percentage_error(self.df_test['sales'], predictions)
-            r2 = r2_score(self.df_test['sales'], predictions)
+            # FIXED: Capital S for Sales
+            mae = mean_absolute_error(self.df_test['Sales'], predictions)
+            rmse = np.sqrt(mean_squared_error(self.df_test['Sales'], predictions))
+            mape = mean_absolute_percentage_error(self.df_test['Sales'], predictions)
+            r2 = r2_score(self.df_test['Sales'], predictions)
             
             results.append({
                 'Model': model_name,
@@ -179,11 +182,12 @@ class ForecastPipeline:
                 future_dates = model.make_future_dataframe(periods=periods)
                 forecast = model.predict(future_dates)
                 
-                forecast_future = forecast[forecast['ds'] > self.df['date'].max()][
+                # FIXED: Correct column name OrderDate
+                forecast_future = forecast[forecast['ds'] > self.df['OrderDate'].max()][
                     ['ds', 'yhat', 'yhat_lower', 'yhat_upper']
                 ].copy()
                 
-                forecast_future.columns = ['date', 'forecast', 'forecast_lower', 'forecast_upper']
+                forecast_future.columns = ['OrderDate', 'forecast', 'forecast_lower', 'forecast_upper']
                 forecast_future['forecast'] = forecast_future['forecast'].clip(lower=0)
                 forecast_future['forecast_lower'] = forecast_future['forecast_lower'].clip(lower=0)
                 forecast_future['forecast_upper'] = forecast_future['forecast_upper'].clip(lower=0)
@@ -206,9 +210,10 @@ class ForecastPipeline:
             logger.info("✓ Saved model comparison results")
         
         # Save predictions
+        # FIXED: Correct column name OrderDate and Sales
         predictions_df = pd.DataFrame({
-            'date': self.df_test['date'],
-            'actual_sales': self.df_test['sales']
+            'OrderDate': self.df_test['OrderDate'],
+            'actual_sales': self.df_test['Sales']
         })
         
         for model_name, preds in self.predictions.items():
@@ -221,8 +226,8 @@ class ForecastPipeline:
         if self.forecast is not None:
             # Combine with historical for Power BI
             historical = pd.DataFrame({
-                'date': self.df['date'],
-                'sales': self.df['sales'],
+                'OrderDate': self.df['OrderDate'],
+                'sales': self.df['Sales'],
                 'data_type': 'Historical',
                 'forecast_lower': np.nan,
                 'forecast_upper': np.nan
@@ -231,7 +236,7 @@ class ForecastPipeline:
             forecast_data = self.forecast.copy()
             forecast_data['data_type'] = 'Forecast'
             forecast_data['sales'] = forecast_data['forecast']
-            forecast_data = forecast_data[['date', 'sales', 'data_type', 'forecast_lower', 'forecast_upper']]
+            forecast_data = forecast_data[['OrderDate', 'sales', 'data_type', 'forecast_lower', 'forecast_upper']]
             
             combined = pd.concat([historical, forecast_data], ignore_index=True)
             combined.to_csv(self.output_path / 'powerbi_data.csv', index=False)
@@ -264,7 +269,7 @@ class ForecastPipeline:
         logger.info("✓ Pipeline complete!")
         logger.info("="*60)
 
-
+# FIXED: Corrected underscores and indentation
 if __name__ == '__main__':
-    pipeline = ForecastPipeline('../data/processed/engineered_features.csv')
+    pipeline = ForecastPipeline('data/processed/engineered_features.csv')
     pipeline.run_pipeline()

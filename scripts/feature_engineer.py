@@ -249,3 +249,9 @@ if __name__ == '__main__':
     print(f"\nEngineered features shape: {engineered.shape}")
     print(f"\nSample of engineered data:")
     print(engineered.head())
+    
+# Save the data to a CSV file
+    import os
+    os.makedirs('data/processed', exist_ok=True)
+    engineered.to_csv('data/processed/engineered_features.csv', index=False)
+    print("\nFile saved successfully to data/processed/engineered_features.csv")
